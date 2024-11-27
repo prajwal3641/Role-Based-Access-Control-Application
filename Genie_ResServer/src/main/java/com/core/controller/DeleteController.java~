@@ -1,0 +1,58 @@
+package com.infosys.controller;
+
+import com.infosys.model.Genie;
+import com.infosys.model.Wish;
+import com.infosys.repository.GenieRepository;
+import com.infosys.repository.WishRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequiredArgsConstructor
+@Slf4j
+public class DeleteController {
+
+    private final GenieRepository genieRepository;
+    private final WishRepository wishRepository;
+    private final EntityManager entityManager;
+    private  Logger logg;
+
+    @PutMapping("/withdrawWish")
+    @Transactional
+    public ResponseEntity<String> withDrawWish(@RequestParam long wishId, Authentication authentication) {
+        // Retrieve the logged-in user's Genie object
+        Genie genie = genieRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("Genie not found"));
+
+        // Retrieve the Wish object
+        Wish wish = wishRepository.findById(wishId)
+                .orElseThrow(() -> new RuntimeException("Wish not found"));
+
+
+
+        genieRepository.deleteWishUserRelation(wishId, genie.getId());
+
+
+
+        return ResponseEntity.ok("Wish withdrawn successfully for ID: " + wishId);
+
+    }
+
+    @DeleteMapping("/deleteGenie")
+    @Transactional
+    @PreAuthorize("#email == Authentication.principal.claims['sub']")
+    public ResponseEntity<String> deleteGenie(@RequestParam String email) {
+        genieRepository.deleteGenieByEmail(email);
+        return ResponseEntity.ok("Genie deleted successfully");
+    }
+}
